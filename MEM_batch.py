@@ -46,6 +46,11 @@ def x_to_y_star(x, yg, yp, ybm, ybsd, phi):
     # normal distribution with parameters ybm and ybsd
     return ((1 + yg)*x*np.cos(yp+phi) + np.random.normal(loc=ybm, scale=ybsd,
             size=x.size))
+            
+def OLS_min(params):
+    [yg, yp, yb]=[params[0], params[1], params[2]]
+    return np.sum((obs.y_star-((1 + yg)*obs.x_star*np.cos(yp+obs.phi)
+                   + yb))**2)
 
 # ============================ RV Setup =====================================
 try: # If the file of previous RUNS does exist: load results
@@ -56,7 +61,8 @@ except OSError: # When the file doesn't exist
     results = pd.DataFrame(index=np.arange(0, RUNS),
                            columns=('X* gain', 'X* phase', 'X* bias',
                                     'Bayes1 gain', 'Bayes1 phase', 'Bayes1 bias',
-                                    'Bayes2 gain', 'Bayes2 phase', 'Bayes2 bias'))
+                                    'Bayes2 gain', 'Bayes2 phase', 'Bayes2 bias'
+                                    'OLS_gain, OLS_phase, OLS_bias))
     start_i = 1
 
 start_time = time.clock()
@@ -82,8 +88,8 @@ for i in range(start_i, RUNS):
     
     obs = pd.DataFrame({'x_star':x_star_arr, 'phi':phi_v, 'y_star':y_star,
                         'x':x})
-# ================================== WMAE ====================================
-
+# ================================== Minimization methods ====================
+                        
     res2 = scipy.optimize.minimize(Abs_error_x,
                                    np.array([0.0, 0.0, 0.0]),
                                    method='Powell')
@@ -91,11 +97,19 @@ for i in range(start_i, RUNS):
     res = scipy.optimize.minimize(Abs_error_x_star,
                                   np.array([0.0, 0.0, 0.0]),
                                   method='Powell')
+    
+    res_OLS = scipy.optimize.minimize(OLS_min, np.array([0.0, 0.0, 0.0]),
+                                  method='Powell')
                                   
     AbsX_star_err = [(res2.x[0] - res.x[0])/res2.x[0]*100,
-                     (res2.x[1] - res.x[1])/res.x[1]*100, (res2.x[2] -
+                     (res2.x[1] - res.x[1])/res2.x[1]*100, (res2.x[2] -
                                                            res.x[2]) /
-                     res.x[2]*100]
+                     res2.x[2]*100]
+    
+    OLS_err = [(res2.x[0] - res_OLS.x[0])/res2.x[0]*100,
+                     (res2.x[1] - res_OLS.x[1])/res2.x[1]*100, (res2.x[2] -
+                                                           res_OLS.x[2]) /
+                     res2.x[2]*100]
 # =================================== Bayes1 =================================
 
     with Model(verbose=0) as model:
@@ -186,7 +200,8 @@ for i in range(start_i, RUNS):
     
     results.loc[i] = [AbsX_star_err[0], AbsX_star_err[1], AbsX_star_err[2],
                       Bayes1_err[0], Bayes1_err[1], Bayes1_err[2],
-                      Bayes2_err[0], Bayes2_err[1], Bayes2_err[2]]
+                      Bayes2_err[0], Bayes2_err[1], Bayes2_err[2],
+                      OLS_err[0], OLS_err[1], OLS_err[2]]
 
     results.to_csv(path_or_buf='results.csv')
     run_duration = time.clock()-run_start_time
