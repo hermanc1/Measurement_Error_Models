@@ -23,7 +23,7 @@ BIAS_ERROR_MEAN = 5
 BIAS_ERROR_SD = BIAS_ERROR_MEAN*0.5
 X_PRECISION = 0.1  # precision of calibrator at 95% confidence level
 X_CONF = 1.96  # z = 1.96 is the 95% confidence level.
-RUNS = 100
+RUNS = 120
 
 # ================================= Functions ===============================
 # Function for sum(|y*-y*(X*)| / X*)
@@ -50,7 +50,7 @@ def x_to_y_star(x, yg, yp, ybm, ybsd, phi):
 # ============================ RV Setup =====================================
 try: # If the file of previous RUNS does exist: load results
     results = pd.read_csv('results.csv', index_col=0)
-    #start_i = np.where(results['X* gain'].isnull())[0][0]
+    start_i = np.where(results['X* gain'].isnull())[0][0]
     pass
 except OSError: # When the file doesn't exist
     results = pd.DataFrame(index=np.arange(0, RUNS),
@@ -60,7 +60,6 @@ except OSError: # When the file doesn't exist
     start_i = 1
 
 start_time = time.clock()
-start_i=75
 for i in range(start_i, RUNS):
     run_start_time = time.clock()
     np.random.seed = i
